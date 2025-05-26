@@ -1,0 +1,9 @@
+#! /usr/bin/env fish
+
+if test (count $argv) -ne 1
+    echo "Usage: tmux_save <path_to_json_file>"
+    exit 1
+end
+
+set -l out_file $argv[1]
+tmux_save_raw.bash > $out_file && format_json $out_file

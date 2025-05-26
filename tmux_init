@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+
+import json
+import sys
+import os
+
+def get_window_dir_and_title(dir_and_title):
+    dir = dir_and_title.get("dir", "")
+    title = dir_and_title.get("title", "")
+    return dir, title
+
+if len(sys.argv) != 2:
+    print(f"Usage: tmux_init <json_file_specifying_tmux_sessions_and_windows>")
+    sys.exit(1)
+
+with open(sys.argv[1], 'r') as f:
+    data = json.load(f)
+
+first_session = ""
+
+for entry in data:
+    session = entry.get("session", "")
+    assert session
+    if not first_session:
+        first_session = session
+    windows = entry["windows"]
+    assert windows
+    first_dir, first_title = get_window_dir_and_title(windows[0])
+    os.system(f"tmux new-session -d -s {session} -c {first_dir}")
+    if first_title:
+        os.system(f"tmux rename-window -t {session}:0 {first_title}")
+    for dir_and_title in windows[1:]:
+        dir, title = get_window_dir_and_title(dir_and_title)
+        title_specifier = ""
+        if title:
+            title_specifier = f" -n {title}"
+        os.system(f"tmux new-window -t {session}: -c {dir}{title_specifier}")
+    os.system(f"tmux select-window -t {session}:0")
+
+os.system(f"tmux attach -t {first_session}")
+
+# Example json file specifying tmux sessions and windows
+# [
+#   {
+#     "session": "dotfiles",
+#     "windows": [
+#       {
+#         "dir": "$HOME/dotfiles",
+#         "title": "term"
+#       },
+#       {
+#         "dir": "$HOME/dotfiles"
+#       },
+#       {
+#         "dir": "$HOME/dotfiles"
+#       }
+#     ]
+#   },
+#   {
+#     "session": "scripts",
+#     "windows": [
+#       {
+#         "dir": "$HOME/dev/scripts"
+#       },
+#       {
+#         "dir": "$HOME/dev/scripts"
+#       },
+#       {
+#         "dir": "$HOME/dev/scripts"
+#       }
+#     ]
+#   }
+# ]
