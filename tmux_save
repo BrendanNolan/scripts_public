@@ -43,7 +43,7 @@ def save_sessions(out_path: str):
     session_list = []
     ordered_sessions = sessions_in_order(all_windows)
     for session in ordered_sessions:
-        session_list.append({"session:": session, "windows": []})
+        session_list.append({"session": session, "windows": []})
     for window in all_windows:
         session, title, dir, _ = window.split()
         dir = to_home_env_path(dir)
@@ -58,5 +58,4 @@ if __name__ == "__main__":
         print("Usage: tmux_save <output_json_file>")
     else:
         save_sessions(sys.argv[1])
-
 
