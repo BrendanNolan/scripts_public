@@ -1,9 +1,62 @@
-#! /usr/bin/env fish
+#! /usr/bin/env python3
 
-if test (count $argv) -ne 1
-    echo "Usage: tmux_save <path_to_json_file>"
-    exit 1
-end
 
-set -l out_file $argv[1]
-tmux_save_raw.bash > $out_file && format_json $out_file
+import json
+import os
+import subprocess
+import sys
+
+
+def to_home_env_path(path: str):
+    home = os.environ["HOME"]
+    absolute_path = os.path.abspath(os.path.expanduser(path))
+    if absolute_path.startswith(home):
+        return absolute_path.replace(home, "$HOME", 1)
+    return absolute_path
+
+
+def second_element(pair):
+    _, y = pair
+    return y
+
+
+def sessions_in_order(window_list):
+    sessions_and_indices = []
+    for window in window_list:
+        session, _, _, index = window.split()
+        sessions_and_indices.append((session, int(index[1:])))
+    sessions_and_indices.sort(key=second_element)
+    sessions = []
+    for session, _ in sessions_and_indices:
+        if not session in sessions:
+            sessions.append(session)
+    return sessions
+
+
+def save_sessions(out_path: str):
+    shells = ["fish", "csh", "zsh", "bash", "nu", "nushell", "dash"]
+    all_windows = subprocess.check_output(
+        "tmux list-panes -a -F \'#{session_name} #{window_name} #{pane_current_path} #{session_id}\'",
+        shell=True,
+        text=True)
+    all_windows = [x.strip() for x in all_windows.split('\n') if x]
+    session_list = []
+    ordered_sessions = sessions_in_order(all_windows)
+    for session in ordered_sessions:
+        session_list.append({"session:": session, "windows": []})
+    for window in all_windows:
+        session, title, dir, _ = window.split()
+        dir = to_home_env_path(dir)
+        window_descriptor = {"dir": dir, "title": title} if not title in shells else {"dir": dir}
+        session_list[ordered_sessions.index(session)]["windows"].append(window_descriptor)
+    with open(out_path, "w") as outfile:
+        json.dump(session_list, outfile, indent=4)
+
+
+if __name__ == "__main__":
+    if (len(sys.argv) != 2):
+        print("Usage: tmux_save <output_json_file>")
+    else:
+        save_sessions(sys.argv[1])
+
+
