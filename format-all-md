@@ -1,0 +1,3 @@
+#! /usr/bin/env bash
+
+fd -t f -g '*.md' | parallel format-md {}

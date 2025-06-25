@@ -1,0 +1,40 @@
+#! /usr/bin/env bash
+
+usage() {
+    echo 'Usage: find-replace -f FIND_TEXT -r REPLACEMENT_TEXT [-x] [path]'
+    echo 'Arguments: [path] the search path (defaults to current working directory)'
+    echo 'Options: -x Use regular expression matching (defaults to false)'
+}
+
+find=""
+replace=""
+regex=false
+path="."
+
+while getopts 'f:r:xh' opt; do
+    case "${opt}" in
+        h) usage; exit 0;;
+        f) find=${OPTARG};;
+        r) replace=${OPTARG};;
+        x) regex=true;;
+        *) usage >&2; exit 1;;
+    esac
+done
+
+shift $((OPTIND - 1))
+
+if [[ $# -gt 0 ]]; then
+    path=$1
+fi
+
+if [[ -z "${find}" || -z "${replace}" ]]; then
+    usage >&2
+    exit 1
+fi
+
+if $regex; then
+    fd --type file . "$path" | xargs -P0 -I{} sd "$find" "$replace" {}
+else
+    fd --type file . "$path" | xargs -P0 -I{} sd --fixed-strings "$find" "$replace" {}
+fi
+
